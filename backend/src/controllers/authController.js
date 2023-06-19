@@ -2,7 +2,7 @@ const bcrypt = require("bcrypt");
 const passport = require("passport");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user-model");
-const { SALT } = require("../config/serverConfig");
+const { SALT, jwtSecret, jwtExpiration } = require("../config/serverConfig");
 const signup = (req, res) => {
   const { username, password } = req.body;
 
@@ -38,11 +38,45 @@ const signup = (req, res) => {
   });
 };
 
-const login = (req, res, next) => {};
+const login = (req, res, next) => {
+  passport.authenticate("local", { session: false }, (err, user, info) => {
+    if (err) {
+      return res.status(500).json({ message: "An error occurred", error: err });
+    }
 
-const logout = (req, res) => {};
+    if (!user) {
+      return res.status(401).json({ message: "Invalid username or password" });
+    }
 
-const session = (req, res) => {};
+    req.login(user, { session: false }, (err) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ message: "An error occurred", error: err });
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: user._id, username: user.username },
+        jwtSecret,
+        {
+          expiresIn: jwtExpiration,
+        }
+      );
+
+      return res.status(200).json({ token });
+    });
+  })(req, res, next);
+};
+
+const logout = (req, res) => {
+  req.logout();
+  res.status(200).json({ message: "Logged out successfully" });
+};
+
+const session = (req, res) => {
+  res.status(200).json({ user: req.user });
+};
 
 module.exports = {
   signup,
