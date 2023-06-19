@@ -2,7 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const dbConnect = require("./config/dbConfig");
 const { PORT } = require("./config/serverConfig");
-
+const { authRoutes } = require("./routes");
 const app = express();
 
 const setUpServer = () => {
@@ -16,3 +16,6 @@ const setUpServer = () => {
 
 setUpServer();
 dbConnect();
+
+// Routes
+app.use("/api/auth", authRoutes);
