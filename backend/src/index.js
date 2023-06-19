@@ -35,3 +35,4 @@ const setUpServer = () => {
 };
 
 setUpServer();
+module.exports = app;
