@@ -3,44 +3,45 @@ const passport = require("passport");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user-model");
 const { SALT, jwtSecret, jwtExpiration } = require("../config/serverConfig");
-const signup = (req, res) => {
-  const { username, password } = req.body;
 
-  User.findOne({ username }).then((user) => {
-    if (user) {
+const signup = async (req, res) => {
+  const { username, email, password } = req.body;
+
+  try {
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
       return res.status(400).json({ message: "Username already exists" });
+    }
+
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ message: "Email already exists" });
     }
 
     const newUser = new User({
       username,
+      email,
       password,
     });
 
     // Hash password
-    bcrypt.genSalt(10, (err, salt) => {
-      bcrypt.hash(newUser.password, salt, (err, hash) => {
-        if (err) throw err;
-        newUser.password = hash;
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newUser.password, salt);
+    newUser.password = hashedPassword;
 
-        // Save user to the database
-        newUser
-          .save()
-          .then(() =>
-            res
-              .status(201)
-              .json({ message: "User created successfully", data: newUser })
-          )
-          .catch((err) =>
-            res.status(500).json({ message: "Error creating user", error: err })
-          );
-      });
-    });
-  });
+    // Save user to the database
+    await newUser.save();
+
+    return res.status(201).json({ message: "User created successfully" });
+  } catch (err) {
+    return res.status(500).json({ message: "Error creating user", error: err });
+  }
 };
 
-const login = (req, res, next) => {
+const login = async (req, res, next) => {
   passport.authenticate("local", { session: false }, (err, user, info) => {
     if (err) {
+      console.log(err);
       return res.status(500).json({ message: "An error occurred", error: err });
     }
 
@@ -68,9 +69,13 @@ const login = (req, res, next) => {
     });
   })(req, res, next);
 };
-
 const logout = (req, res) => {
-  req.logout();
+  req.logout(function (err) {
+    if (err) {
+      return next(err);
+    }
+    res.redirect("/");
+  });
   res.status(200).json({ message: "Logged out successfully" });
 };
 

@@ -3,8 +3,10 @@ const bodyParser = require("body-parser");
 const passport = require("passport");
 const session = require("express-session");
 const dbConnect = require("./config/dbConfig");
-const { PORT, jwtSecret } = require("./config/serverConfig");
+const { PORT } = require("./config/serverConfig");
 const { authRoutes } = require("./routes");
+const passportConfig = require("./config/passportConfig");
+
 const app = express();
 
 const setUpServer = () => {
@@ -12,15 +14,20 @@ const setUpServer = () => {
   app.use(bodyParser.json());
   app.use(
     session({
-      secret: jwtSecret,
+      secret: "hello",
       resave: false,
       saveUninitialized: false,
     })
   );
 
-  // Initialize passport
+  //   Initialize passport
   app.use(passport.initialize());
   app.use(passport.session());
+  passportConfig(passport);
+  dbConnect();
+
+  // Routes
+  app.use("/api/auth", authRoutes);
 
   app.listen(PORT, () => {
     console.log(`Server Started at ${PORT}`);
@@ -28,9 +35,3 @@ const setUpServer = () => {
 };
 
 setUpServer();
-dbConnect();
-
-// Routes
-app.use("/api/auth", authRoutes);
-
-// Initialize passport
